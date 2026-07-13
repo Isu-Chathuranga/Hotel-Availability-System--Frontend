@@ -48,7 +48,7 @@ const roomSchema = z.object({
 });
 
 const imageSchema = z.object({
-  image_url: z.string().url('Must be a valid URL').min(1, 'Image URL is required'),
+  image_url: z.string().optional(),
 });
 
 export default function HotelOwnerDashboard() {
@@ -71,6 +71,8 @@ export default function HotelOwnerDashboard() {
   const deleteRoom = useDeleteRoom();
 
   const [tab, setTab] = useState('bookings');
+  const [uploadMode, setUploadMode] = useState('file');
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const { register: regEvent, handleSubmit: handleEventSubmit, formState: { errors: eventErrors }, reset: resetEvent } = useForm({
     resolver: zodResolver(eventSchema),
@@ -102,8 +104,18 @@ export default function HotelOwnerDashboard() {
   };
 
   const onImageSubmit = async (data) => {
-    await addHotelImage.mutateAsync({ ...data, hotel_id: selectedHotelId });
+    if (uploadMode === 'file') {
+      if (!selectedFile) return;
+      const formData = new FormData();
+      formData.append('hotel_id', selectedHotelId);
+      formData.append('image', selectedFile);
+      await addHotelImage.mutateAsync(formData);
+    } else {
+      if (!data.image_url) return;
+      await addHotelImage.mutateAsync({ hotel_id: selectedHotelId, image_url: data.image_url });
+    }
     resetImage();
+    setSelectedFile(null);
   };
 
   const onRoomSubmit = async (data) => {
@@ -303,10 +315,20 @@ export default function HotelOwnerDashboard() {
       <div className="hod-mgmt-form">
         <h3 className="hod-mgmt-title">Add Image</h3>
         <form onSubmit={handleImageSubmit(onImageSubmit)}>
-          <div className="hod-mgmt-row">
-            <input className="hod-input" placeholder="https://example.com/image.jpg" {...regImage('image_url')} />
-            {imageErrors.image_url && <span className="hod-error">{imageErrors.image_url.message}</span>}
+          <div className="hod-upload-toggle">
+            <button type="button" className={`hod-toggle-btn ${uploadMode === 'file' ? 'active' : ''}`} onClick={() => setUploadMode('file')}>Upload File</button>
+            <button type="button" className={`hod-toggle-btn ${uploadMode === 'url' ? 'active' : ''}`} onClick={() => setUploadMode('url')}>Image URL</button>
           </div>
+          {uploadMode === 'file' ? (
+            <div className="hod-mgmt-row">
+              <input type="file" className="hod-file-input" accept="image/jpeg,image/png,image/gif,image/webp" onChange={e => setSelectedFile(e.target.files[0])} />
+            </div>
+          ) : (
+            <div className="hod-mgmt-row">
+              <input className="hod-input" placeholder="https://example.com/image.jpg" {...regImage('image_url')} />
+              {imageErrors.image_url && <span className="hod-error">{imageErrors.image_url.message}</span>}
+            </div>
+          )}
           <button className="hod-mgmt-btn" type="submit" disabled={addHotelImage.isPending}>
             {addHotelImage.isPending ? 'Adding...' : 'Add Image'}
           </button>

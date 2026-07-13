@@ -307,6 +307,40 @@
   border-color: #1976D2;
 }
 
+/* ===== UPLOAD TOGGLE ===== */
+.hod-upload-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.hod-toggle-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid rgba(0,0,0,0.23);
+  border-radius: 4px;
+  background: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #4A5565;
+  transition: all 0.15s;
+}
+
+.hod-toggle-btn.active {
+  background: #1976D2;
+  color: #fff;
+  border-color: #1976D2;
+}
+
+.hod-file-input {
+  width: 100%;
+  padding: 8px 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
 /* ===== MANAGEMENT SECTIONS ===== */
 .hod-mgmt-form {
   background: #fff;

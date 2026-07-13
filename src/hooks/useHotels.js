@@ -35,7 +35,12 @@ export function useOwnerHotels() {
 export function useAddHotelImage() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data) => hotelsAPI.addImage(data).then(r => r.data),
+    mutationFn: (data) => {
+      if (data instanceof FormData) {
+        return hotelsAPI.uploadImage(data).then(r => r.data);
+      }
+      return hotelsAPI.addImage(data).then(r => r.data);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hotels', 'owner'] }),
   });
 }

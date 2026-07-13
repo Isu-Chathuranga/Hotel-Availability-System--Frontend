@@ -5,9 +5,6 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost/Backend';
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 export const authAPI = {
@@ -25,6 +22,7 @@ export const hotelsAPI = {
   delete: (id) => api.delete('/api/hotels/delete', { params: { id } }),
   search: (params) => api.get('/api/hotels/search', { params }),
   addImage: (data) => api.post('/api/hotels/add_image', data),
+  uploadImage: (formData) => api.post('/api/hotels/add_image', formData),
   deleteImage: (id) => api.delete('/api/hotels/delete_image', { params: { id } }),
   my: () => api.get('/api/hotels/my'),
 };
