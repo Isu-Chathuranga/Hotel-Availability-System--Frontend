@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hotelsAPI } from '../utils/api';
 
 export function useHotels(params) {
@@ -22,5 +22,28 @@ export function useHotel(id) {
     queryKey: ['hotel', id],
     queryFn: () => hotelsAPI.get(id).then(r => r.data.hotel),
     enabled: !!id,
+  });
+}
+
+export function useOwnerHotels() {
+  return useQuery({
+    queryKey: ['hotels', 'owner'],
+    queryFn: () => hotelsAPI.my().then(r => r.data.hotels || []),
+  });
+}
+
+export function useAddHotelImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => hotelsAPI.addImage(data).then(r => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hotels', 'owner'] }),
+  });
+}
+
+export function useDeleteHotelImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => hotelsAPI.deleteImage(id).then(r => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hotels', 'owner'] }),
   });
 }

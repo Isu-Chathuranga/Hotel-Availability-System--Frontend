@@ -25,6 +25,8 @@ export const hotelsAPI = {
   delete: (id) => api.delete('/api/hotels/delete', { params: { id } }),
   search: (params) => api.get('/api/hotels/search', { params }),
   addImage: (data) => api.post('/api/hotels/add_image', data),
+  deleteImage: (id) => api.delete('/api/hotels/delete_image', { params: { id } }),
+  my: () => api.get('/api/hotels/my'),
 };
 
 export const roomsAPI = {

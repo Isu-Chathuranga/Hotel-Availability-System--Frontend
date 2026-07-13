@@ -150,7 +150,8 @@ export default function HotelDetail() {
     );
   }
 
-  const images = hotel.images || [];
+  const rawImages = hotel.images || [];
+  const images = rawImages.map(i => typeof i === 'string' ? i : i.image_url);
   const gallery = images;
   const thumbnails = images;
   const rating = parseFloat(hotel.rating) || 0;

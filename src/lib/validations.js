@@ -37,7 +37,6 @@ export const hotelRegistrationSchema = z.object({
   city: z.string().min(1, 'City is required'),
   country: z.string().min(1, 'Country is required'),
   description: z.string().min(1, 'Description is required'),
-  amenities: z.string().optional(),
 });
 
 export const contactSchema = z.object({
