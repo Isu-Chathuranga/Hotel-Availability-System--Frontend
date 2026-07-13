@@ -427,6 +427,33 @@
   font-size: 13px;
 }
 
+.hod-mgmt-item-url {
+  margin-left: 8px;
+}
+
+.hod-mgmt-item-url a {
+  color: #1976D2;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.hod-mgmt-item-url a:hover {
+  text-decoration: underline;
+}
+
+.hod-mgmt-item-dist {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #4A5565;
+}
+
+.hod-mgmt-item-coords {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #9CA3AF;
+  font-family: monospace;
+}
+
 .hod-mgmt-del {
   padding: 6px 12px;
   background: #D32F2F;

@@ -477,6 +477,13 @@
   color: #D0D5DD;
 }
 
+.hd-no-places {
+  text-align: center;
+  color: #6A7282;
+  font-size: 14px;
+  padding: 24px 0;
+}
+
 .hd-dest-arrow {
   flex-shrink: 0;
 }

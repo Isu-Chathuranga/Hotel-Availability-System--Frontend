@@ -8,6 +8,7 @@ import { useOwnerHotels, useAddHotelImage, useDeleteHotelImage } from '../hooks/
 import { useEvents, useCreateEvent, useDeleteEvent } from '../hooks/useEvents';
 import { usePlaces, useCreatePlace, useDeletePlace } from '../hooks/usePlaces';
 import { useRooms, useCreateRoom, useDeleteRoom } from '../hooks/useRooms';
+import { placesAPI } from '../utils/api';
 import './HotelOwnerDashboard.css';
 
 const statusColors = {
@@ -35,9 +36,12 @@ const eventSchema = z.object({
 });
 
 const placeSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  description: z.string().min(1, 'Description is required'),
-  distance: z.string().min(1, 'Distance is required'),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  location_url: z.string().min(1, 'Google Maps link is required'),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
+  distance: z.string().optional(),
 });
 
 const roomSchema = z.object({
@@ -77,7 +81,7 @@ export default function HotelOwnerDashboard() {
   const { register: regEvent, handleSubmit: handleEventSubmit, formState: { errors: eventErrors }, reset: resetEvent } = useForm({
     resolver: zodResolver(eventSchema),
   });
-  const { register: regPlace, handleSubmit: handlePlaceSubmit, formState: { errors: placeErrors }, reset: resetPlace } = useForm({
+  const { register: regPlace, handleSubmit: handlePlaceSubmit, formState: { errors: placeErrors }, reset: resetPlace, setValue: setPlaceValue } = useForm({
     resolver: zodResolver(placeSchema),
   });
   const { register: regImage, handleSubmit: handleImageSubmit, formState: { errors: imageErrors }, reset: resetImage } = useForm({
@@ -99,7 +103,13 @@ export default function HotelOwnerDashboard() {
   };
 
   const onPlaceSubmit = async (data) => {
-    await createPlace.mutateAsync({ ...data, hotel_id: selectedHotelId });
+    await createPlace.mutateAsync({
+      ...data,
+      hotel_id: selectedHotelId,
+      name: data.name || 'Unknown Place',
+      latitude: data.latitude ? Number(data.latitude) : null,
+      longitude: data.longitude ? Number(data.longitude) : null,
+    });
     resetPlace();
   };
 
@@ -229,16 +239,23 @@ export default function HotelOwnerDashboard() {
         <h3 className="hod-mgmt-title">Add Destination</h3>
         <form onSubmit={handlePlaceSubmit(onPlaceSubmit)}>
           <div className="hod-mgmt-row">
-            <input className="hod-input" placeholder="Place name" {...regPlace('name')} />
-            {placeErrors.name && <span className="hod-error">{placeErrors.name.message}</span>}
-          </div>
-          <div className="hod-mgmt-row">
-            <textarea className="hod-textarea" placeholder="Description" {...regPlace('description')} />
-            {placeErrors.description && <span className="hod-error">{placeErrors.description.message}</span>}
-          </div>
-          <div className="hod-mgmt-row">
-            <input className="hod-input" placeholder="Distance (e.g. 2.5 km)" {...regPlace('distance')} />
-            {placeErrors.distance && <span className="hod-error">{placeErrors.distance.message}</span>}
+            <input className="hod-input" placeholder="Paste Google Maps link here" {...regPlace('location_url')} onBlur={async (e) => {
+              regPlace('location_url').onBlur(e);
+              const url = e.target.value.trim();
+              if (!url) return;
+
+              try {
+                const res = await placesAPI.extract(url);
+                const data = res.data;
+                if (data) {
+                  if (data.name) setPlaceValue('name', data.name);
+                  if (data.latitude) setPlaceValue('latitude', String(data.latitude));
+                  if (data.longitude) setPlaceValue('longitude', String(data.longitude));
+                  if (data.display_name) setPlaceValue('description', data.display_name);
+                }
+              } catch (_) {}
+            }} />
+            {placeErrors.location_url && <span className="hod-error">{placeErrors.location_url.message}</span>}
           </div>
           <button className="hod-mgmt-btn" type="submit" disabled={createPlace.isPending}>
             {createPlace.isPending ? 'Adding...' : 'Add Destination'}
@@ -254,7 +271,10 @@ export default function HotelOwnerDashboard() {
           places.map(p => (
             <div key={p.id} className="hod-mgmt-item">
               <div className="hod-mgmt-item-info">
-                <strong>{p.name}</strong> — {p.distance}
+                <strong>{p.name}</strong>
+                {p.distance && <span className="hod-mgmt-item-dist">{p.distance}</span>}
+                {p.location_url && <span className="hod-mgmt-item-url"><a href={p.location_url} target="_blank" rel="noopener noreferrer">View on Maps</a></span>}
+                {(p.latitude && p.longitude) && <span className="hod-mgmt-item-coords">({p.latitude}, {p.longitude})</span>}
                 <p className="hod-mgmt-item-desc">{p.description}</p>
               </div>
               <button className="hod-mgmt-del" onClick={() => deletePlace.mutate(p.id)} disabled={deletePlace.isPending}>Delete</button>

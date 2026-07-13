@@ -4,13 +4,7 @@ import { useHotel } from '../hooks/useHotels';
 import { useRooms } from '../hooks/useRooms';
 import './HotelDetail.css';
 
-const DESTINATIONS = [
-  { name: 'Sigiriya Rock Fortress', distance: '12.5 km', duration: '25 min drive', lat: 7.9570, lng: 80.7603, color: '#155DFC' },
-  { name: 'Dambulla Cave Temple', distance: '8.3 km', duration: '15 min drive', lat: 7.8573, lng: 80.6517, color: '#00A63E' },
-  { name: 'Pidurangala Rock', distance: '14.0 km', duration: '30 min drive', lat: 7.9689, lng: 80.7544, color: '#D08700' },
-  { name: 'Minneriya National Park', distance: '22.0 km', duration: '40 min drive', lat: 8.0350, lng: 80.8500, color: '#C10007' },
-  { name: 'Kandalama Lake', distance: '5.5 km', duration: '12 min drive', lat: 7.8700, lng: 80.7000, color: '#7C3AED' },
-];
+const COLORS = ['#155DFC', '#00A63E', '#D08700', '#C10007', '#7C3AED', '#E91E63', '#00BCD4', '#FF5722'];
 
 function getRatingLabel(rating) {
   if (rating >= 4.5) return 'Excellent';
@@ -63,22 +57,24 @@ export default function HotelDetail() {
       .addTo(map)
       .bindPopup(`<b>${hotel.name}</b><br/>${hotel.address || ''}`);
 
+    const places = (hotel.places || []).filter(p => p.latitude && p.longitude);
     const points = [window.L.latLng(hotelLat, hotelLng)];
     const routeLayers = [];
 
-    DESTINATIONS.forEach((d) => {
+    places.forEach((d, idx) => {
+      const color = COLORS[idx % COLORS.length];
       const icon = window.L.divIcon({
         className: '',
-        html: `<div style="width:32px;height:32px;background:${d.color};border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.25);color:#fff;font-size:12px;font-weight:700">${d.distance.split(' ')[0]}</div>`,
+        html: `<div style="width:32px;height:32px;background:${color};border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.25);color:#fff;font-size:12px;font-weight:700">${(d.distance || '').split(' ')[0] || idx + 1}</div>`,
         iconSize: [32, 32],
         iconAnchor: [16, 32],
       });
 
-      window.L.marker([d.lat, d.lng], { icon })
+      window.L.marker([d.latitude, d.longitude], { icon })
         .addTo(map)
-        .bindPopup(`<b>${d.name}</b><br/>Distance: ${d.distance}<br/>Drive: ${d.duration}`);
+        .bindPopup(`<b>${d.name}</b>${d.distance ? '<br/>Distance: ' + d.distance : ''}`);
 
-      points.push(window.L.latLng(d.lat, d.lng));
+      points.push(window.L.latLng(d.latitude, d.longitude));
     });
 
     mapRef.current = map;
@@ -86,19 +82,19 @@ export default function HotelDetail() {
     const bounds = window.L.latLngBounds(points).pad(0.15);
     map.fitBounds(bounds);
 
-    const routePromises = DESTINATIONS.map((d) =>
-      fetch(`https://router.project-osrm.org/route/v1/driving/${hotelLng},${hotelLat};${d.lng},${d.lat}?overview=full&geometries=geojson`)
+    const routePromises = places.map((d) =>
+      fetch(`https://router.project-osrm.org/route/v1/driving/${hotelLng},${hotelLat};${d.longitude},${d.latitude}?overview=full&geometries=geojson`)
         .then((r) => r.json())
         .then((data) => ({ dest: d, data }))
         .catch(() => null)
     );
 
     Promise.all(routePromises).then((results) => {
-      results.forEach((result) => {
+      results.forEach((result, idx) => {
         if (!result || !result.data?.routes?.[0]?.geometry) return;
         const coords = result.data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]);
         const polyline = window.L.polyline(coords, {
-          color: result.dest.color,
+          color: COLORS[idx % COLORS.length],
           weight: 3,
           opacity: 0.7,
         }).addTo(map);
@@ -305,26 +301,30 @@ export default function HotelDetail() {
             </div>
             <div className="hd-map-wrap" id="hd-map-container" />
             <div className="hd-destinations">
-              {DESTINATIONS.map((d, i) => (
-                <a key={i} className="hd-dest-item" href={`https://www.google.com/maps?q=${d.lat},${d.lng}`} target="_blank" rel="noopener noreferrer">
-                  <div className="hd-dest-marker" style={{ background: d.color }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-2.21-1.79-4-4-4z" />
-                    </svg>
-                  </div>
-                  <div className="hd-dest-info">
-                    <div className="hd-dest-name">{d.name}</div>
-                    <div className="hd-dest-meta">
-                      <span className="hd-dest-distance">{d.distance}</span>
-                      <span className="hd-dest-sep">&middot;</span>
-                      <span>{d.duration}</span>
+              {(hotel.places || []).length > 0 ? (
+                (hotel.places || []).map((d, i) => (
+                  <a key={d.id || i} className="hd-dest-item" href={d.location_url || (d.latitude && d.longitude ? `https://www.google.com/maps?q=${d.latitude},${d.longitude}` : '#')} target="_blank" rel="noopener noreferrer">
+                    <div className="hd-dest-marker" style={{ background: COLORS[i % COLORS.length] }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-2.21-1.79-4-4-4z" />
+                      </svg>
                     </div>
-                  </div>
-                  <svg className="hd-dest-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M6 4l4 4-4 4" stroke="#99A1AF" strokeWidth="1.33" strokeLinecap="round" />
-                  </svg>
-                </a>
-              ))}
+                    <div className="hd-dest-info">
+                      <div className="hd-dest-name">{d.name}</div>
+                      {d.distance && (
+                        <div className="hd-dest-meta">
+                          <span className="hd-dest-distance">{d.distance}</span>
+                        </div>
+                      )}
+                    </div>
+                    <svg className="hd-dest-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M6 4l4 4-4 4" stroke="#99A1AF" strokeWidth="1.33" strokeLinecap="round" />
+                    </svg>
+                  </a>
+                ))
+              ) : (
+                <p className="hd-no-places">No nearby destinations available</p>
+              )}
             </div>
           </div>
 

@@ -61,6 +61,8 @@ export const placesAPI = {
   create: (data) => api.post('/api/places/create', data),
   update: (data) => api.put('/api/places/update', data),
   delete: (id) => api.delete('/api/places/delete', { params: { id } }),
+  geocode: (lat, lng) => api.get('/api/places/geocode', { params: { lat, lng } }),
+  extract: (url) => api.post('/api/places/extract', { url }),
 };
 
 export const adminAPI = {
