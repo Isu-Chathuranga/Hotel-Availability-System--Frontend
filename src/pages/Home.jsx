@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { hotelsAPI, bookingsAPI } from '../utils/api';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { bookingsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useHotels } from '../hooks/useHotels';
 import { Link, useNavigate } from 'react-router-dom';
 import './Home.css';
 
@@ -107,8 +109,12 @@ const events = ['Day Events', 'Night Events', 'Pool Parties', 'Live Music', 'Con
 export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [hotels, setHotels] = useState([]);
-  const [bookings, setBookings] = useState([]);
+  const { data: hotels = [] } = useHotels();
+  const { data: bookings = [] } = useQuery({
+    queryKey: ['bookings', 'user-home'],
+    queryFn: () => bookingsAPI.listUser().then(r => r.data.bookings || []),
+    enabled: !!user,
+  });
 
   // Search bar state
   const [location, setLocation] = useState('');
@@ -127,29 +133,17 @@ export default function Home() {
   const [ovPurpose, setOvPurpose] = useState(null);
   const [ovEvent, setOvEvent] = useState(null);
 
-  useEffect(() => {
-    hotelsAPI.list()
-      .then(res => {
-        const items = res.data.hotels || [];
-        setHotels(items.map(h => ({
-          id: h.id,
-          name: h.name,
-          location: h.location || h.city || '',
-          desc: h.description || '',
-          price: h.min_room_price || 0,
-          rating: h.rating || 0,
-          reviews: 0,
-          image: h.image || '',
-          tags: h.amenities ? h.amenities.split(',').map(t => t.trim()).filter(Boolean).slice(0, 3) : [],
-        })));
-      })
-      .catch(() => setHotels([]));
-    bookingsAPI.listUser()
-      .then(res => setBookings(res.data.bookings || []))
-      .catch(() => setBookings([]));
-  }, []);
-
-  const displayHotels = hotels;
+  const displayHotels = (hotels || []).map(h => ({
+    id: h.id,
+    name: h.name,
+    location: h.location || h.city || '',
+    desc: h.description || '',
+    price: h.min_room_price || 0,
+    rating: h.rating || 0,
+    reviews: h.total_reviews || 0,
+    image: h.image || '',
+    tags: h.amenities ? h.amenities.split(',').map(t => t.trim()).filter(Boolean).slice(0, 3) : [],
+  }));
 
   const handleSearch = () => {
     const params = new URLSearchParams();

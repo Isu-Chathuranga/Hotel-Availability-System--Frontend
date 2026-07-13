@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { hotelsAPI } from '../utils/api';
+import { useHotel } from '../hooks/useHotels';
+import { useRooms } from '../hooks/useRooms';
 import './HotelDetail.css';
 
 const DESTINATIONS = [
@@ -25,28 +26,9 @@ export default function HotelDetail() {
   const mapRef = useRef(null);
   const [selectedThumb, setSelectedThumb] = useState(0);
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [hotel, setHotel] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchHotel = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await hotelsAPI.get(id);
-        if (!res.data.hotel) {
-          throw new Error('Hotel not found');
-        }
-        setHotel(res.data.hotel);
-      } catch (err) {
-        setError(err.response?.data?.message || err.message || 'Failed to load hotel details');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHotel();
-  }, [id]);
+  const { data: hotel, isLoading: loading, error } = useHotel(id);
+  const { data: rooms = [] } = useRooms(id);
 
   const initMap = (retries = 0) => {
     const container = document.getElementById('hd-map-container');
@@ -179,7 +161,6 @@ export default function HotelDetail() {
       ? hotel.amenities
       : [];
   const popularFacilities = amenitiesList.slice(0, 3).join(', ');
-  const rooms = hotel.rooms || [];
   const minPrice = rooms.length > 0 ? Math.min(...rooms.map(r => Number(r.price))) : 0;
 
   return (

@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { hotelsAPI, roomsAPI, bookingsAPI } from '../utils/api';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useHotel } from '../hooks/useHotels';
+import { useRooms } from '../hooks/useRooms';
+import { useCreateBooking } from '../hooks/useBookings';
 import { useAuth } from '../context/AuthContext';
+import { bookingSchema } from '../lib/validations';
 import './Booking.css';
 
 function getNights(checkIn, checkOut) {
@@ -23,67 +28,36 @@ export default function Booking() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [hotel, setHotel] = useState(null);
-  const [room, setRoom] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: hotel, isLoading: loading, error } = useHotel(hotelId);
+  const { data: rooms = [] } = useRooms(hotelId);
+  const createBooking = useCreateBooking();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [specialRequests, setSpecialRequests] = useState('');
+  const room = rooms.find((r) => String(r.id) === String(roomId)) || rooms[0] || null;
 
   const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const dayAfter = new Date(today);
-  dayAfter.setDate(dayAfter.getDate() + 3);
   const toDateInput = (d) => d.toISOString().split('T')[0];
-
-  const [checkIn, setCheckIn] = useState(toDateInput(tomorrow));
-  const [checkOut, setCheckOut] = useState(toDateInput(dayAfter));
-  const [guests, setGuests] = useState(2);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmCode, setConfirmCode] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const [hotelRes, roomsRes] = await Promise.all([
-          hotelsAPI.get(hotelId),
-          roomsAPI.list(hotelId),
-        ]);
-        const hotelData = hotelRes.data.hotel;
-        if (!hotelData) throw new Error('Hotel not found');
-        const roomsData = roomsRes.data.rooms || [];
-        setHotel(hotelData);
-        const found = roomsData.find((r) => String(r.id) === String(roomId));
-        setRoom(found || (roomsData.length > 0 ? roomsData[0] : null));
-        if (!found && roomsData.length === 0) throw new Error('No rooms available');
-      } catch (err) {
-        setError(err.response?.data?.message || err.message || 'Failed to load booking information');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [hotelId, roomId]);
+  const { register, handleSubmit: formSubmit, watch, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      first_name: user?.first_name || (user?.name || '').split(' ')[0] || '',
+      last_name: user?.last_name || (user?.name || '').split(' ').slice(1).join(' ') || '',
+      email: user?.email || '',
+      phone: '',
+      check_in: toDateInput(new Date(Date.now() + 86400000)),
+      check_out: toDateInput(new Date(Date.now() + 3 * 86400000)),
+      guests: 2,
+      special_requests: '',
+    },
+  });
 
-  useEffect(() => {
-    if (user) {
-      const nameParts = (user.name || '').split(' ');
-      setFirstName(user.first_name || nameParts[0] || '');
-      setLastName(user.last_name || nameParts.slice(1).join(' ') || '');
-      setEmail(user.email || '');
-    }
-  }, [user]);
+  const checkIn = watch('check_in');
+  const checkOut = watch('check_out');
+  const guests = watch('guests');
 
   const nights = getNights(checkIn, checkOut);
   const roomPrice = Number(room?.price) || 0;
@@ -91,33 +65,24 @@ export default function Booking() {
   const taxes = subtotal * 0.12;
   const total = subtotal + taxes;
 
-  const generateCode = () => `BKDQ${Math.random().toString(36).toUpperCase().slice(2, 10)}`;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!firstName || !lastName || !email) return;
-    setSubmitting(true);
+  const onSubmit = async (data) => {
     setSubmitError('');
-
     try {
-      const res = await bookingsAPI.create({
+      const res = await createBooking.mutateAsync({
         room_id: room.id,
         hotel_id: hotelId,
-        check_in: checkIn,
-        check_out: checkOut,
-        guests,
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone,
-        special_requests: specialRequests,
+        check_in: data.check_in,
+        check_out: data.check_out,
+        guests: data.guests,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        special_requests: data.special_requests,
       });
-      const code = res.data?.booking?.booking_code || res.data?.confirmation_code || generateCode();
-      setConfirmCode(code);
-      setSubmitting(false);
+      setConfirmCode(res?.booking?.booking_code || res?.confirmation_code || `BKDQ${Math.random().toString(36).toUpperCase().slice(2, 10)}`);
       setShowConfirm(true);
     } catch (err) {
-      setSubmitting(false);
       setSubmitError(err.response?.data?.message || 'Booking failed. Please ensure you are logged in and try again.');
     }
   };
@@ -166,27 +131,17 @@ export default function Booking() {
                 </svg>
                 <span>Guest Information</span>
               </div>
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={formSubmit(onSubmit)}>
                 <div className="bk-form-grid">
                   <div className="bk-field">
                     <label>First Name</label>
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="First Name"
-                      required
-                    />
+                    <input type="text" {...register('first_name')} placeholder="First Name" />
+                    {errors.first_name && <span className="bk-field-error">{errors.first_name.message}</span>}
                   </div>
                   <div className="bk-field">
                     <label>Last Name</label>
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Last Name"
-                      required
-                    />
+                    <input type="text" {...register('last_name')} placeholder="Last Name" />
+                    {errors.last_name && <span className="bk-field-error">{errors.last_name.message}</span>}
                   </div>
                   <div className="bk-field">
                     <label>
@@ -196,13 +151,8 @@ export default function Booking() {
                       </svg>
                       Email
                     </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Email"
-                      required
-                    />
+                    <input type="email" {...register('email')} placeholder="Email" />
+                    {errors.email && <span className="bk-field-error">{errors.email.message}</span>}
                   </div>
                   <div className="bk-field">
                     <label>
@@ -211,12 +161,7 @@ export default function Booking() {
                       </svg>
                       Phone
                     </label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Phone"
-                    />
+                    <input type="tel" {...register('phone')} placeholder="Phone" />
                   </div>
                 </div>
 
@@ -232,35 +177,17 @@ export default function Booking() {
                   <div className="bk-form-grid">
                     <div className="bk-field">
                       <label>Check-in</label>
-                      <input
-                        type="date"
-                        value={checkIn}
-                        min={toDateInput(today)}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCheckIn(val);
-                          if (checkOut && val > checkOut) {
-                            const next = new Date(val);
-                            next.setDate(next.getDate() + 1);
-                            setCheckOut(toDateInput(next));
-                          }
-                        }}
-                        required
-                      />
+                      <input type="date" {...register('check_in')} min={toDateInput(new Date())} />
+                      {errors.check_in && <span className="bk-field-error">{errors.check_in.message}</span>}
                     </div>
                     <div className="bk-field">
                       <label>Check-out</label>
-                      <input
-                        type="date"
-                        value={checkOut}
-                        min={checkIn || toDateInput(today)}
-                        onChange={(e) => setCheckOut(e.target.value)}
-                        required
-                      />
+                      <input type="date" {...register('check_out')} min={checkIn || toDateInput(new Date())} />
+                      {errors.check_out && <span className="bk-field-error">{errors.check_out.message}</span>}
                     </div>
                     <div className="bk-field">
                       <label>Guests</label>
-                      <select value={guests} onChange={(e) => setGuests(Number(e.target.value))}>
+                      <select {...register('guests', { valueAsNumber: true })}>
                         {[1,2,3,4,5,6,7,8].map(n => (
                           <option key={n} value={n}>{n} Guest{n > 1 ? 's' : ''}</option>
                         ))}
@@ -277,18 +204,12 @@ export default function Booking() {
                     </svg>
                     <span>Special Requests</span>
                   </div>
-                  <textarea
-                    className="bk-textarea"
-                    value={specialRequests}
-                    onChange={(e) => setSpecialRequests(e.target.value)}
-                    placeholder="Any special requests or requirements?"
-                    rows={4}
-                  />
+                  <textarea className="bk-textarea" {...register('special_requests')} placeholder="Any special requests or requirements?" rows={4} />
                 </div>
 
                 {submitError && <p className="bk-error">{submitError}</p>}
-                <button type="submit" className="bk-submit-btn" disabled={submitting}>
-                  {submitting ? 'Booking...' : `Complete Booking — $${total.toFixed(2)}`}
+                <button type="submit" className="bk-submit-btn" disabled={isSubmitting}>
+                  {isSubmitting ? 'Booking...' : `Complete Booking — $${total.toFixed(2)}`}
                 </button>
               </form>
             </div>

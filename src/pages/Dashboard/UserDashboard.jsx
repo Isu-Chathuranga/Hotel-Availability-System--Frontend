@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { bookingsAPI } from '../../utils/api';
+import { useUserBookings } from '../../hooks/useBookings';
 import { useAuth } from '../../context/AuthContext';
 import './Dashboard.css';
 
@@ -15,25 +15,7 @@ function StatusBadge({ status }) {
 
 export default function UserDashboard() {
   const { user } = useAuth();
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchBookings = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await bookingsAPI.listUser();
-        setBookings(res.data.bookings || []);
-      } catch (err) {
-        setError('Failed to load bookings.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBookings();
-  }, []);
+  const { data: bookings = [], isLoading: loading, isError, error } = useUserBookings();
 
   return (
     <div className="dashboard-page">

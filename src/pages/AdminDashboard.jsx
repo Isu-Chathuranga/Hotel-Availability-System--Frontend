@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { adminAPI } from '../utils/api';
+import { useAdminHotels, useDeleteHotel } from '../hooks/useAdmin';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
@@ -11,21 +11,14 @@ export default function AdminDashboard() {
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [hotelSearchQuery, setHotelSearchQuery] = useState('');
   const [flaggedFilter, setFlaggedFilter] = useState(false);
-  const [registeredHotels, setRegisteredHotels] = useState([]);
-  const [hotelsLoading, setHotelsLoading] = useState(true);
-
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       navigate('/login');
     }
   }, [user, navigate]);
 
-  useEffect(() => {
-    adminAPI.hotels()
-      .then(res => setRegisteredHotels(res.data.hotels || []))
-      .catch(() => setRegisteredHotels([]))
-      .finally(() => setHotelsLoading(false));
-  }, []);
+  const { data: registeredHotels = [], isLoading: hotelsLoading } = useAdminHotels();
+  const deleteHotel = useDeleteHotel();
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -49,8 +42,7 @@ export default function AdminDashboard() {
 
   const handleRemoveHotel = async (hotelId) => {
     try {
-      await adminAPI.deleteHotel(hotelId);
-      setRegisteredHotels(prev => prev.filter(h => h.id !== hotelId));
+      await deleteHotel.mutateAsync(hotelId);
       setSelectedHotel(null);
     } catch {
       setSelectedHotel(null);

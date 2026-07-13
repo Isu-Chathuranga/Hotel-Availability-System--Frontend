@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { bookingsAPI } from '../utils/api';
+import { useOwnerBookings, useConfirmBooking, useCancelBooking } from '../hooks/useBookings';
 import './HotelOwnerBookingDetail.css';
 
 const statusColors = {
@@ -24,25 +24,11 @@ const statusTextColors = {
 export default function HotelOwnerBookingDetail() {
   const { bookingCode } = useParams();
   const navigate = useNavigate();
-  const [booking, setBooking] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const { data: bookings = [], isLoading: loading } = useOwnerBookings();
+  const confirmMutation = useConfirmBooking();
+  const cancelMutation = useCancelBooking();
 
-  const fetchBooking = () => {
-    setLoading(true);
-    bookingsAPI.listOwner()
-      .then(res => {
-        const bookings = res.data.bookings || [];
-        const found = bookings.find(b => b.booking_code === bookingCode);
-        setBooking(found || null);
-      })
-      .catch(() => setBooking(null))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchBooking();
-  }, [bookingCode]);
+  const booking = bookings.find(b => b.booking_code === bookingCode) || null;
 
   if (loading) {
     return (
@@ -72,26 +58,18 @@ export default function HotelOwnerBookingDetail() {
   const initial = guestName.charAt(0).toUpperCase();
 
   const handleConfirm = async () => {
-    setActionLoading(true);
     try {
-      await bookingsAPI.confirm(booking.id);
-      fetchBooking();
+      await confirmMutation.mutateAsync(booking.id);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to confirm booking');
-    } finally {
-      setActionLoading(false);
     }
   };
 
   const handleCancel = async () => {
-    setActionLoading(true);
     try {
-      await bookingsAPI.cancel(booking.id);
-      fetchBooking();
+      await cancelMutation.mutateAsync(booking.id);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to cancel booking');
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -237,13 +215,13 @@ export default function HotelOwnerBookingDetail() {
 
         <div className="hobd-actions">
           {canConfirm && (
-            <button className="hobd-btn hobd-btn-primary" onClick={handleConfirm} disabled={actionLoading}>
-              {actionLoading ? 'Processing...' : 'Confirm Booking'}
+            <button className="hobd-btn hobd-btn-primary" onClick={handleConfirm} disabled={confirmMutation.isPending}>
+              {confirmMutation.isPending ? 'Processing...' : 'Confirm Booking'}
             </button>
           )}
           {canCancel && (
-            <button className="hobd-btn hobd-btn-danger" onClick={handleCancel} disabled={actionLoading}>
-              {actionLoading ? 'Processing...' : 'Cancel Booking'}
+            <button className="hobd-btn hobd-btn-danger" onClick={handleCancel} disabled={cancelMutation.isPending}>
+              {cancelMutation.isPending ? 'Processing...' : 'Cancel Booking'}
             </button>
           )}
           {currentStatus === 'cancelled' && (

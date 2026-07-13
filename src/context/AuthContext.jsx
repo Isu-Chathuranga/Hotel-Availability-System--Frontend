@@ -1,31 +1,27 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { authAPI } from '../utils/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     authAPI.checkSession()
       .then((res) => {
-        if (res.data.user) {
-          setUser(res.data.user);
-        }
+        if (res.data.user) setUser(res.data.user);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const login = async (email, password) => {
-    try {
-      const res = await authAPI.login({ email, password });
-      setUser(res.data.user);
-      return res.data;
-    } catch (err) {
-      throw err;
-    }
+    const res = await authAPI.login({ email, password });
+    setUser(res.data.user);
+    return res.data;
   };
 
   const register = async (data) => {
@@ -37,6 +33,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try { await authAPI.logout(); } catch (_) {}
     setUser(null);
+    queryClient.clear();
   };
 
   return (

@@ -1,28 +1,25 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '../context/AuthContext';
+import { loginSchema } from '../lib/validations';
 import '../styles/Auth.css';
 import './Login.css';
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data) => {
     setError('');
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      return;
-    }
-    setLoading(true);
     try {
-      const result = await login(email, password);
+      const result = await login(data.email, data.password);
       if (result?.user?.role === 'admin') {
         navigate('/admin-dashboard');
       } else {
@@ -30,8 +27,6 @@ export default function Login() {
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Login failed');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -45,32 +40,20 @@ export default function Login() {
 
             {error && <div className="auth-error">{error}</div>}
 
-            <form onSubmit={handleSubmit} className="auth-form">
+            <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
               <div className="auth-input-group">
                 <span className="auth-label">E Mail</span>
-                <input
-                  type="email"
-                  className="auth-input"
-                  placeholder=""
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
+                <input type="email" className="auth-input" placeholder="" {...register('email')} autoComplete="email" />
+                {errors.email && <span className="auth-field-error">{errors.email.message}</span>}
               </div>
               <div className="auth-input-group">
                 <span className="auth-label">Password</span>
-                <input
-                  type="password"
-                  className="auth-input"
-                  placeholder=""
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                />
+                <input type="password" className="auth-input" placeholder="" {...register('password')} autoComplete="current-password" />
+                {errors.password && <span className="auth-field-error">{errors.password.message}</span>}
               </div>
 
-              <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in'}
+              <button type="submit" className="auth-btn" disabled={isSubmitting}>
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
               </button>
             </form>
 

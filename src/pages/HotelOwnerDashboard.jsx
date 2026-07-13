@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { bookingsAPI } from '../utils/api';
+import { useOwnerBookings } from '../hooks/useBookings';
 import './HotelOwnerDashboard.css';
 
 const statusColors = {
@@ -24,15 +24,7 @@ const statusTextColors = {
 export default function HotelOwnerDashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('bookings');
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    bookingsAPI.listOwner()
-      .then(res => setBookings(res.data.bookings || []))
-      .catch(() => setBookings([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: bookings = [], isLoading: loading } = useOwnerBookings();
 
   const stats = {
     total: bookings.length,

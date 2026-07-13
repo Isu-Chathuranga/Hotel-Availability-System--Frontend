@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { authAPI } from '../utils/api';
+import { loginSchema } from '../lib/validations';
 import './HotelOwnerLogin.css';
 
 export default function HotelOwnerLogin() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data) => {
     setError('');
-    setLoading(true);
-
     try {
-      const res = await authAPI.login({ email, password });
+      const res = await authAPI.login(data);
       if (res.data.user?.role !== 'owner') {
         setError('Access denied. Owner account required.');
         await authAPI.logout();
@@ -25,8 +26,6 @@ export default function HotelOwnerLogin() {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -44,7 +43,7 @@ export default function HotelOwnerLogin() {
           <h1 className="hol-title">Hotel Owner Login</h1>
           <p className="hol-subtitle">Access your hotel dashboard</p>
 
-          <form className="hol-form" onSubmit={handleLogin}>
+          <form className="hol-form" onSubmit={handleSubmit(onSubmit)}>
             <div className="hol-field">
               <label className="hol-label">Hotel Email</label>
               <div className="hol-input-wrap">
@@ -52,8 +51,9 @@ export default function HotelOwnerLogin() {
                   <rect x="1.33" y="2.67" width="13.33" height="10.67" rx="1.33" stroke="#99A1AF" strokeWidth="1.33"/>
                   <rect x="1.33" y="4.67" width="13.33" height="4" stroke="#99A1AF" strokeWidth="1.33"/>
                 </svg>
-                <input type="email" className="hol-input" placeholder="your-hotel@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                <input type="email" className="hol-input" placeholder="your-hotel@example.com" {...register('email')} required />
               </div>
+              {errors.email && <p className="hol-error">{errors.email.message}</p>}
             </div>
 
             <div className="hol-field">
@@ -63,13 +63,14 @@ export default function HotelOwnerLogin() {
                   <rect x="2.67" y="7.33" width="10.67" height="7.33" rx="1.33" stroke="#99A1AF" strokeWidth="1.33"/>
                   <rect x="5.33" y="4" width="5.33" height="4" rx="2.67" stroke="#99A1AF" strokeWidth="1.33"/>
                 </svg>
-                <input type="password" className="hol-input" placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required />
+                <input type="password" className="hol-input" placeholder="Enter your password" {...register('password')} required />
               </div>
+              {errors.password && <p className="hol-error">{errors.password.message}</p>}
             </div>
 
             {error && <p className="hol-error">{error}</p>}
 
-            <button type="submit" className="hol-submit" disabled={loading}>{loading ? 'Logging in...' : 'Login to Dashboard'}</button>
+            <button type="submit" className="hol-submit" disabled={isSubmitting}>{isSubmitting ? 'Logging in...' : 'Login to Dashboard'}</button>
           </form>
 
           <p className="hol-register-text">
