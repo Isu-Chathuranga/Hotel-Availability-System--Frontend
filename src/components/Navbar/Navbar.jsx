@@ -44,16 +44,7 @@ export default function Navbar() {
                 </div>
               </div>
               <div className="navbar-dropdown-divider" />
-              <Link to="/dashboard" className="navbar-dropdown-item" onClick={() => setMenuOpen(false)}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect x="1.33" y="1.33" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.33"/>
-                  <rect x="8.67" y="1.33" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.33"/>
-                  <rect x="1.33" y="8.67" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.33"/>
-                  <rect x="8.67" y="8.67" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.33"/>
-                </svg>
-                Dashboard
-              </Link>
-              <Link to="/home" className="navbar-dropdown-item" onClick={() => setMenuOpen(false)}>
+              <Link to="/my-bookings" className="navbar-dropdown-item" onClick={() => setMenuOpen(false)}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M2 14V5.5L8 1.5L14 5.5V14H10V9H6V14H2Z" stroke="currentColor" strokeWidth="1.33" strokeLinejoin="round"/>
                 </svg>

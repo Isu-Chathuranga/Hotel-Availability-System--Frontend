@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './Landing.css';
 
 const features = [
@@ -80,6 +81,8 @@ const destinations = [
 ];
 
 export default function Landing() {
+  const { user } = useAuth();
+
   return (
     <div className="landing-page">
 
@@ -93,8 +96,14 @@ export default function Landing() {
             <Link to="/hotel-owner-portal" className="landing-nav-link landing-nav-link-purple">Hotel Owner Portal</Link>
           </div>
           <div className="landing-nav-actions">
-            <Link to="/login" className="landing-btn-outline">Login</Link>
-            <Link to="/register" className="landing-btn-gold">Sign Up</Link>
+            {user ? (
+              <Link to="/home" className="landing-btn-gold">Book Hotels</Link>
+            ) : (
+              <>
+                <Link to="/login" className="landing-btn-outline">Login</Link>
+                <Link to="/register" className="landing-btn-gold">Sign Up</Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -110,8 +119,14 @@ export default function Landing() {
           <h1 className="landing-hero-title">Welcome to Extraordinary Experiences</h1>
           <p className="landing-hero-subtitle">Discover handpicked luxury hotels that redefine hospitality</p>
           <div className="landing-hero-actions">
-            <Link to="/login" className="landing-btn-outline landing-btn-hero">Login</Link>
-            <Link to="/register" className="landing-btn-gold landing-btn-hero">Sign Up</Link>
+            {user ? (
+              <Link to="/home" className="landing-btn-gold landing-btn-hero">Book Hotels</Link>
+            ) : (
+              <>
+                <Link to="/login" className="landing-btn-outline landing-btn-hero">Login</Link>
+                <Link to="/register" className="landing-btn-gold landing-btn-hero">Sign Up</Link>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -197,7 +212,7 @@ export default function Landing() {
                 <div className="landing-destination-content">
                   <h3 className="landing-destination-name">{dest.name}</h3>
                   <span className="landing-destination-count">{dest.hotelCount}</span>
-                  <Link to="/home" className="landing-destination-explore">Explore →</Link>
+                  <Link to={`/search?location=${dest.name}`} className="landing-destination-explore">Explore →</Link>
                 </div>
               </div>
             ))}

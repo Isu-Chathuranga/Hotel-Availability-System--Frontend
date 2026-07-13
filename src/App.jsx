@@ -87,7 +87,7 @@ export default function App() {
         }
       />
       <Route
-        path="/dashboard"
+        path="/my-bookings"
         element={
           <ProtectedRoute>
             <AuthLayout><UserDashboard /></AuthLayout>
